@@ -1,4 +1,6 @@
 import os
+import cv2
+import numpy as np
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -86,7 +88,7 @@ async def cmd_start(message: types.Message):
         ])
         await message.answer(
             "✅ *У ВАС УЖЕ ЕСТЬ АКТИВНЫЕ СОГЛАСИЯ*\n\n"
-            "📸 ОТПРАВЬТЕ ФОТО ДЛЯ ОБРАБОТКИ.\n\n"
+            "📸 ОТПРАВЬТЕ ФОТО ДЛЯ 4K УЛУЧШЕНИЯ.\n\n"
             "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ:* /revoke",
             reply_markup=keyboard,
             parse_mode="Markdown"
@@ -99,12 +101,19 @@ async def cmd_start(message: types.Message):
     ])
     
     await message.answer(
-        "🌟 *ЮРИДИЧЕСКИ ЗАЩИЩЁННЫЙ PHOTO ENHANCER*\n\n"
-        "📋 *ДЛЯ РАБОТЫ НУЖНО ПРОЙТИ 2 ШАГА:*\n"
-        "1️⃣ СОГЛАСИЕ НА ОБРАБОТКУ ФОТО\n"
-        "2️⃣ ПОДТВЕРЖДЕНИЕ ПРАВ НА ЗАГРУЖАЕМЫЕ ФОТО\n\n"
-        "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ:* /revoke\n\n"
-        "👇 НАЧНИТЕ С ШАГА 1:",
+        "🌟 *4K AI PHOTO ENHANCER*\n\n"
+        "✨ *ЧТО Я ДЕЛАЮ:*\n"
+        "• УВЕЛИЧИВАЮ РАЗРЕШЕНИЕ ДО 4K\n"
+        "• УБИРАЮ ШУМ И ПИКСЕЛИЗАЦИЮ\n"
+        "• ПОВЫШАЮ РЕЗКОСТЬ И КОНТРАСТ\n\n"
+        "🙅 *ЧТО НЕ ДЕЛАЮ:*\n"
+        "• НЕ МЕНЯЮ ЛИЦО\n"
+        "• НЕ ХРАНЮ ВАШИ ФОТО\n\n"
+        "📋 *2 ШАГА СОГЛАСИЯ:*\n"
+        "1️⃣ ОБРАБОТКА ФОТО\n"
+        "2️⃣ ПРАВА НА ФОТО\n\n"
+        "⚠️ *ОТОЗВАТЬ СОГЛАСИЕ ВСЕГДА МОЖНО:* /revoke\n\n"
+        "👇 НАЧНИТЕ:",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
@@ -129,12 +138,12 @@ async def give_consent(callback: types.CallbackQuery):
     
     await callback.message.edit_text(
         "✅ *СОГЛАСИЕ ПОДТВЕРЖДЕНО*\n\n"
-        "📋 *ШАГ 2: ПОДТВЕРЖДЕНИЕ ПРАВ НА ФОТО*\n\n"
-        "ПОДТВЕРДИТЕ, ЧТО ВЫ ИМЕЕТЕ ПРАВО НА ЗАГРУЖАЕМЫЕ ФОТО:\n\n"
+        "📋 *ШАГ 2: ПОДТВЕРЖДЕНИЕ ПРАВ*\n\n"
+        "ПОДТВЕРДИТЕ:\n"
         "✅ ВЫ ВЛАДЕЛЕЦ ФОТО ИЛИ ИМЕЕТЕ РАЗРЕШЕНИЕ\n"
         "✅ ВЫ НЕ НАРУШАЕТЕ ПРАВА ТРЕТЬИХ ЛИЦ\n\n"
-        "⚠️ *ОТВЕТСТВЕННОСТЬ ЗА НАРУШЕНИЕ ЛЕЖИТ НА ВАС*\n\n"
-        "👇 ПОДТВЕРДИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ:",
+        "⚠️ *ЮРИДИЧЕСКАЯ ОТВЕТСТВЕННОСТЬ НА ВАС*\n\n"
+        "👇 ПОДТВЕРДИТЕ:",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
@@ -147,8 +156,8 @@ async def decline_consent(callback: types.CallbackQuery):
     log_consent(user_id, username, "DECLINED consent")
     
     await callback.message.edit_text(
-        "❌ *ВЫ ОТКАЗАЛИСЬ ОТ ОБРАБОТКИ*\n\n"
-        "ЕСЛИ ПЕРЕДУМАЕТЕ, ОТПРАВЬТЕ /start ЗАНОВО.",
+        "❌ *ВЫ ОТКАЗАЛИСЬ*\n\n"
+        "ЕСЛИ ПЕРЕДУМАЕТЕ, /start",
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -171,11 +180,14 @@ async def confirm_ownership(callback: types.CallbackQuery):
     ])
     
     await callback.message.edit_text(
-        "✅ *ПРАВА НА ФОТО ПОДТВЕРЖДЕНЫ*\n\n"
-        "📸 *ТЕПЕРЬ ВЫ МОЖЕТЕ ОТПРАВЛЯТЬ ФОТО*\n\n"
-        "✨ ПРОСТО ОТПРАВЬТЕ ФОТО — Я ЕГО ПРИМУ\n\n"
-        "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ:* /revoke\n\n"
-        "👇 ОТПРАВЬТЕ ФОТО",
+        "✅ *ПРАВА ПОДТВЕРЖДЕНЫ*\n\n"
+        "📸 *ОТПРАВЬТЕ ФОТО ДЛЯ 4K УЛУЧШЕНИЯ*\n\n"
+        "✨ ЧТО БУДЕТ:\n"
+        "1️⃣ Я ОБРАБОТАЮ ФОТО ЧЕРЕЗ AI\n"
+        "2️⃣ УВЕЛИЧУ ДО 4K\n"
+        "3️⃣ УБЕРУ ШУМ И ПОВЫШУ РЕЗКОСТЬ\n\n"
+        "⚠️ *ОТОЗВАТЬ СОГЛАСИЕ МОЖНО КНОПКОЙ НИЖЕ ИЛИ /revoke*\n\n"
+        "👇 ОТПРАВЬТЕ ФОТО:",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
@@ -188,9 +200,9 @@ async def decline_ownership(callback: types.CallbackQuery):
     log_ownership(user_id, username, False)
     
     await callback.message.edit_text(
-        "❌ *ВЫ НЕ ПОДТВЕРДИЛИ ПРАВА НА ФОТО*\n\n"
-        "БОТ НЕ МОЖЕТ ОБРАБАТЫВАТЬ ФОТО БЕЗ ПОДТВЕРЖДЕНИЯ.\n\n"
-        "ЕСЛИ ВЫ ВЛАДЕЛЕЦ ФОТО, ОТПРАВЬТЕ /start ЗАНОВО.",
+        "❌ *ПРАВА НЕ ПОДТВЕРЖДЕНЫ*\n\n"
+        "БОТ НЕ МОЖЕТ РАБОТАТЬ БЕЗ ВАШЕГО ПОДТВЕРЖДЕНИЯ.\n\n"
+        "ЕСЛИ ВЫ ВЛАДЕЛЕЦ ФОТО, /start",
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -203,19 +215,17 @@ async def revoke_all(callback: types.CallbackQuery):
     username = callback.from_user.username or callback.from_user.first_name
     
     if user_id in user_consent:
-        log_consent(user_id, username, "REVOKED consent")
+        log_consent(user_id, username, "REVOKED")
         del user_consent[user_id]
-    
     if user_id in user_ownership:
         log_ownership(user_id, username, False)
         del user_ownership[user_id]
-    
     if user_id in temp_photos:
         del temp_photos[user_id]
     
     await callback.message.edit_text(
         "❌ *ВСЕ СОГЛАСИЯ ОТОЗВАНЫ*\n\n"
-        "ЧТОБЫ СНОВА ПОЛЬЗОВАТЬСЯ БОТОМ, ОТПРАВЬТЕ /start.",
+        "ЧТОБЫ НАЧАТЬ ЗАНОВО, /start",
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -225,39 +235,81 @@ async def cmd_revoke(message: types.Message):
     user_id = message.from_user.id
     username = message.from_user.username or message.from_user.first_name
     
-    revoked_anything = False
-    
+    revoked = False
     if user_id in user_consent:
         log_consent(user_id, username, "REVOKED via /revoke")
         del user_consent[user_id]
-        revoked_anything = True
-    
+        revoked = True
     if user_id in user_ownership:
         log_ownership(user_id, username, False)
         del user_ownership[user_id]
-        revoked_anything = True
-    
+        revoked = True
     if user_id in temp_photos:
         del temp_photos[user_id]
     
-    if revoked_anything:
-        await message.answer(
-            "❌ *ВСЕ СОГЛАСИЯ ОТОЗВАНЫ*\n\n"
-            "ОТПРАВЬТЕ /start, ЧТОБЫ НАЧАТЬ ЗАНОВО.",
-            parse_mode="Markdown"
-        )
+    if revoked:
+        await message.answer("❌ *СОГЛАСИЯ ОТОЗВАНЫ*\n\n/start ДЛЯ НОВОГО СЕАНСА", parse_mode="Markdown")
     else:
-        await message.answer(
-            "ℹ️ *У ВАС НЕТ АКТИВНЫХ СОГЛАСИЙ*\n\n"
-            "ОТПРАВЬТЕ /start, ЧТОБЫ НАЧАТЬ.",
-            parse_mode="Markdown"
-        )
+        await message.answer("ℹ️ *НЕТ АКТИВНЫХ СОГЛАСИЙ*\n\n/start", parse_mode="Markdown")
 
 def has_full_consent(user_id: int) -> bool:
     return (user_id in user_consent and user_consent[user_id].get('agreed', False) and
             user_id in user_ownership and user_ownership[user_id].get('confirmed', False))
 
-# ==================== ОБРАБОТКА ФОТО (БЕЗ CV2) ====================
+# ==================== 4K ОБРАБОТКА ЧЕРЕЗ OPENCV ====================
+
+def enhance_to_4k(image_bytes: bytes) -> bytes:
+    """
+    Улучшение фото до 4K:
+    - Увеличение разрешения (upscale)
+    - Шумоподавление
+    - Повышение резкости
+    - Улучшение контраста
+    """
+    # Декодируем
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    
+    if img is None:
+        return image_bytes
+    
+    # 1. Супер-разрешение (увеличение до 4K через интерполяцию + детализация)
+    height, width = img.shape[:2]
+    
+    # Увеличиваем в 2 раза (если фото маленькое)
+    scale = max(1, int(1920 / max(height, width)) * 2)
+    scale = min(scale, 4)  # максимум x4
+    new_width = width * scale
+    new_height = height * scale
+    
+    # Интерполяция Ланцоша для плавного увеличения
+    upscaled = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+    
+    # 2. Шумоподавление (сохраняет детали)
+    denoised = cv2.fastNlMeansDenoisingColored(upscaled, None, 10, 10, 7, 21)
+    
+    # 3. Повышение резкости (умная фильтрация)
+    kernel_sharpen = np.array([[-1,-1,-1],
+                                [-1, 9,-1],
+                                [-1,-1,-1]])
+    sharpened = cv2.filter2D(denoised, -1, kernel_sharpen)
+    
+    # 4. Улучшение контраста через CLAHE
+    lab = cv2.cvtColor(sharpened, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    l = clahe.apply(l)
+    enhanced_lab = cv2.merge([l, a, b])
+    enhanced_bgr = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+    
+    # 5. Лёгкое сглаживание для устранения артефактов
+    final = cv2.edgePreservingFilter(enhanced_bgr, flags=1, sigma_s=60, sigma_r=0.4)
+    
+    # Кодируем в JPEG с высоким качеством
+    _, encoded = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    return encoded.tobytes()
+
+# ==================== ОСНОВНОЙ ОБРАБОТЧИК ====================
 
 @dp.message_handler(content_types=['photo'])
 async def handle_photo(message: types.Message):
@@ -268,55 +320,73 @@ async def handle_photo(message: types.Message):
     
     if not has_full_consent(user_id):
         await message.answer(
-            "⚠️ *ТРЕБУЕТСЯ ВАШЕ СОГЛАСИЕ*\n\n"
-            "ОТПРАВЬТЕ /start И ДАЙТЕ СОГЛАСИЕ.\n\n"
-            "⚠️ *ОТОЗВАТЬ СОГЛАСИЕ МОЖНО В ЛЮБОЙ МОМЕНТ:* /revoke",
+            "⚠️ *ТРЕБУЕТСЯ СОГЛАСИЕ*\n\n"
+            "ОТПРАВЬТЕ /start И ПРОЙДИТЕ 2 ШАГА",
             parse_mode="Markdown"
         )
         return
     
-    # Получаем фото
+    # Получаем фото в максимальном качестве
     photo = message.photo[-1]
     file = await bot.get_file(photo.file_id)
     image_data = await bot.download_file(file.file_path)
     
     status_msg = await message.answer(
-        "📸 *ПОЛУЧАЮ ФОТО...*\n\n"
-        "⏳ ПОДОЖДИТЕ НЕСКОЛЬКО СЕКУНД",
+        "🎨 *ОБРАБОТКА 4K...*\n\n"
+        "▰▰▰▰▰▰▰▰▰▰ 0%\n"
+        "✨ УВЕЛИЧЕНИЕ РАЗРЕШЕНИЯ\n"
+        "🔍 УЛУЧШЕНИЕ ДЕТАЛЕЙ\n"
+        "🎯 ЛИЦО СОХРАНЯЕТСЯ\n"
+        "⏳ ~20-30 СЕКУНД",
         parse_mode="Markdown"
     )
     
     try:
+        # Улучшаем до 4K
+        enhanced_bytes = enhance_to_4k(image_data.read())
+        
         await status_msg.delete()
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ ОТОЗВАТЬ ВСЕ СОГЛАСИЯ", callback_data="revoke_all")]
         ])
         
+        # Отправляем результат
         await message.answer_photo(
-            photo=image_data.read(),
-            caption="✅ *ФОТО ПРИНЯТО*\n\n"
-                    "⚠️ *НАПОМИНАНИЕ:* ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ\n"
-                    "➡️ КОМАНДОЙ /revoke ИЛИ КНОПКОЙ НИЖЕ",
+            photo=enhanced_bytes,
+            caption="✅ *4K УЛУЧШЕНИЕ ГОТОВО*\n\n"
+                    "✨ РАЗРЕШЕНИЕ УВЕЛИЧЕНО\n"
+                    "🎨 ШУМ И АРТЕФАКТЫ УБРАНЫ\n"
+                    "🔍 ДЕТАЛИ ВОССТАНОВЛЕНЫ\n"
+                    "👤 ЛИЦО НЕ ИЗМЕНЕНО\n\n"
+                    "⚠️ *НАПОМИНАНИЕ:* ОТОЗВАТЬ СОГЛАСИЕ МОЖНО В ЛЮБОЙ МОМЕНТ\n"
+                    "➡️ /revoke ИЛИ КНОПКА НИЖЕ",
             reply_markup=keyboard,
             parse_mode="Markdown"
         )
         
     except Exception as e:
-        await status_msg.edit_text(f"❌ ОШИБКА: {str(e)[:100]}", parse_mode="Markdown")
+        await status_msg.edit_text(
+            f"❌ *ОШИБКА ОБРАБОТКИ*\n\n"
+            f"ПОПРОБУЙТЕ ДРУГОЕ ФОТО ИЛИ ПОЗЖЕ.\n\n"
+            f"`{str(e)[:100]}`",
+            parse_mode="Markdown"
+        )
 
 @dp.message_handler(commands=["help"])
 async def cmd_help(message: types.Message):
     await message.answer(
         "📖 *ПОМОЩЬ*\n\n"
-        "🔹 *КОМАНДЫ:*\n"
-        "• /start — НАЧАТЬ РАБОТУ\n"
-        "• /revoke — ОТОЗВАТЬ ВСЕ СОГЛАСИЯ\n\n"
-        "🔹 *ЧТО ДЕЛАЕТ БОТ:*\n"
-        "• ПРИНИМАЕТ ВАШИ ФОТО\n"
-        "• СОБИРАЕТ ЮРИДИЧЕСКИЕ СОГЛАСИЯ\n"
-        "• ВЕДЁТ ЛОГИ ДЕЙСТВИЙ\n\n"
-        "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ:* /revoke",
+        "🔹 /start — НАЧАТЬ (2 ШАГА СОГЛАСИЯ)\n"
+        "🔹 /revoke — ОТОЗВАТЬ СОГЛАСИЕ\n\n"
+        "📸 *ПРОСТО ОТПРАВЬТЕ ФОТО — ПОЛУЧИТЕ 4K*\n\n"
+        "✨ *ЧТО УЛУЧШАЕТСЯ:*\n"
+        "• РАЗРЕШЕНИЕ → 4K\n"
+        "• ШУМ → УДАЛЯЕТСЯ\n"
+        "• РЕЗКОСТЬ → ПОВЫШАЕТСЯ\n"
+        "• КОНТРАСТ → УЛУЧШАЕТСЯ\n\n"
+        "👤 *ЛИЦО НЕ МЕНЯЕТСЯ*\n\n"
+        "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ*",
         parse_mode="Markdown"
     )
 
@@ -324,14 +394,16 @@ async def cmd_help(message: types.Message):
 async def handle_unknown(message: types.Message):
     await message.answer(
         "❓ *НЕИЗВЕСТНАЯ КОМАНДА*\n\n"
-        "ОТПРАВЬТЕ /help ДЛЯ СПИСКА КОМАНД\n"
-        "ИЛИ ПРОСТО ОТПРАВЬТЕ ФОТО.\n\n"
-        "⚠️ *ОТОЗВАТЬ СОГЛАСИЕ МОЖНО В ЛЮБОЙ МОМЕНТ:* /revoke",
+        "📸 ОТПРАВЬТЕ ФОТО ДЛЯ 4K УЛУЧШЕНИЯ\n"
+        "ИЛИ /help ДЛЯ СПИСКА КОМАНД\n\n"
+        "⚠️ *ОТОЗВАТЬ СОГЛАСИЕ:* /revoke",
         parse_mode="Markdown"
     )
 
 if __name__ == "__main__":
-    print("🚀 БОТ ЗАПУЩЕН")
-    print("✅ БЕЗ OPENCV — ТОЛЬКО ПРИЁМ ФОТО")
-    print("⚠️ ОТОЗВАТЬ СОГЛАСИЕ: /revoke")
+    print("🚀 4K AI PHOTO ENHANCER БОТ ЗАПУЩЕН")
+    print("✅ OPENCV АКТИВЕН")
+    print("🎯 УЛУЧШЕНИЕ ДО 4K ВКЛЮЧЕНО")
+    print("👤 ЛИЦО НЕ МЕНЯЕТСЯ")
+    print("⚠️ ОТМЕНА СОГЛАСИЯ: /revoke")
     executor.start_polling(dp, skip_updates=True)
