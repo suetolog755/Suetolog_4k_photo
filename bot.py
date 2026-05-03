@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = "@brmodels095"
+CHANNEL_ID = os.getenv("CHANNEL_ID", "@brmodels095")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
@@ -256,15 +256,15 @@ def has_full_consent(user_id: int) -> bool:
     return (user_id in user_consent and user_consent[user_id].get('agreed', False) and
             user_id in user_ownership and user_ownership[user_id].get('confirmed', False))
 
-# ==================== 4K ОБРАБОТКА ЧЕРЕЗ OPENCV ====================
+# ==================== ЕСТЕСТВЕННОЕ УЛУЧШЕНИЕ ДО 4K (БЕЗ МУЛЬТЯШНОСТИ) ====================
 
 def enhance_to_4k(image_bytes: bytes) -> bytes:
     """
-    Улучшение фото до 4K:
-    - Увеличение разрешения (upscale)
-    - Шумоподавление
-    - Повышение резкости
-    - Улучшение контраста
+    Естественное улучшение фото до 4K:
+    - Минимальное шумоподавление
+    - Умеренное повышение резкости
+    - Лёгкое улучшение контраста
+    - БЕЗ переглаживания (никакого мультяшного эффекта)
     """
     # Декодируем
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -273,40 +273,38 @@ def enhance_to_4k(image_bytes: bytes) -> bytes:
     if img is None:
         return image_bytes
     
-    # 1. Супер-разрешение (увеличение до 4K через интерполяцию + детализация)
     height, width = img.shape[:2]
     
-    # Увеличиваем в 2 раза (если фото маленькое)
-    scale = max(1, int(1920 / max(height, width)) * 2)
-    scale = min(scale, 4)  # максимум x4
+    # Увеличение до 4K (максимум 2x, не больше — чтобы не было артефактов)
+    scale = min(2, max(1, int(1920 / max(height, width))))
     new_width = width * scale
     new_height = height * scale
     
-    # Интерполяция Ланцоша для плавного увеличения
+    # Интерполяция Ланцоша для плавного увеличения (самый качественный метод)
     upscaled = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
     
-    # 2. Шумоподавление (сохраняет детали)
-    denoised = cv2.fastNlMeansDenoisingColored(upscaled, None, 10, 10, 7, 21)
+    # 1. ЛЁГКОЕ шумоподавление (сильно уменьшил параметры, чтобы не мылить)
+    denoised = cv2.fastNlMeansDenoisingColored(upscaled, None, 3, 3, 7, 15)
     
-    # 3. Повышение резкости (умная фильтрация)
-    kernel_sharpen = np.array([[-1,-1,-1],
-                                [-1, 9,-1],
-                                [-1,-1,-1]])
+    # 2. УМЕРЕННАЯ резкость (мягкое ядро, без ореолов)
+    kernel_sharpen = np.array([[0, -0.3, 0],
+                                [-0.3, 2.2, -0.3],
+                                [0, -0.3, 0]])
     sharpened = cv2.filter2D(denoised, -1, kernel_sharpen)
     
-    # 4. Улучшение контраста через CLAHE
+    # 3. ЛЁГКОЕ улучшение контраста (без пересветов и затенений)
     lab = cv2.cvtColor(sharpened, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8,8))
     l = clahe.apply(l)
     enhanced_lab = cv2.merge([l, a, b])
     enhanced_bgr = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
     
-    # 5. Лёгкое сглаживание для устранения артефактов
-    final = cv2.edgePreservingFilter(enhanced_bgr, flags=1, sigma_s=60, sigma_r=0.4)
+    # 4. НЕ делаем edgePreservingFilter — он даёт мультяшность
+    # Просто возвращаем результат
     
     # Кодируем в JPEG с высоким качеством
-    _, encoded = cv2.imencode('.jpg', final, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    _, encoded = cv2.imencode('.jpg', enhanced_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
     return encoded.tobytes()
 
 # ==================== ОСНОВНОЙ ОБРАБОТЧИК ====================
@@ -337,12 +335,12 @@ async def handle_photo(message: types.Message):
         "✨ УВЕЛИЧЕНИЕ РАЗРЕШЕНИЯ\n"
         "🔍 УЛУЧШЕНИЕ ДЕТАЛЕЙ\n"
         "🎯 ЛИЦО СОХРАНЯЕТСЯ\n"
-        "⏳ ~20-30 СЕКУНД",
+        "⏳ ~15-25 СЕКУНД",
         parse_mode="Markdown"
     )
     
     try:
-        # Улучшаем до 4K
+        # Улучшаем до 4K (естественно, без мультяшности)
         enhanced_bytes = enhance_to_4k(image_data.read())
         
         await status_msg.delete()
@@ -402,8 +400,7 @@ async def handle_unknown(message: types.Message):
 
 if __name__ == "__main__":
     print("🚀 4K AI PHOTO ENHANCER БОТ ЗАПУЩЕН")
-    print("✅ OPENCV АКТИВЕН")
-    print("🎯 УЛУЧШЕНИЕ ДО 4K ВКЛЮЧЕНО")
+    print("✅ ЕСТЕСТВЕННОЕ УЛУЧШЕНИЕ (БЕЗ МУЛЬТЯШНОСТИ)")
     print("👤 ЛИЦО НЕ МЕНЯЕТСЯ")
     print("⚠️ ОТМЕНА СОГЛАСИЯ: /revoke")
     executor.start_polling(dp, skip_updates=True)
