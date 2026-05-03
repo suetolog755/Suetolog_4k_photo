@@ -1,6 +1,4 @@
 import os
-import cv2
-import numpy as np
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -175,7 +173,7 @@ async def confirm_ownership(callback: types.CallbackQuery):
     await callback.message.edit_text(
         "✅ *ПРАВА НА ФОТО ПОДТВЕРЖДЕНЫ*\n\n"
         "📸 *ТЕПЕРЬ ВЫ МОЖЕТЕ ОТПРАВЛЯТЬ ФОТО*\n\n"
-        "✨ ПРОСТО ОТПРАВЬТЕ ФОТО — Я ЕГО ОБРАБОТАЮ\n\n"
+        "✨ ПРОСТО ОТПРАВЬТЕ ФОТО — Я ЕГО ПРИМУ\n\n"
         "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ:* /revoke\n\n"
         "👇 ОТПРАВЬТЕ ФОТО",
         reply_markup=keyboard,
@@ -259,17 +257,7 @@ def has_full_consent(user_id: int) -> bool:
     return (user_id in user_consent and user_consent[user_id].get('agreed', False) and
             user_id in user_ownership and user_ownership[user_id].get('confirmed', False))
 
-# ==================== ОБРАБОТКА ФОТО (БЕЗ OPENCV) ====================
-
-def enhance_photo_quality(image_bytes: bytes) -> bytes:
-    """Возвращает фото без изменений — OpenCV временно отключён"""
-    return image_bytes
-
-def remove_wrinkles(image_bytes: bytes) -> bytes:
-    """Возвращает фото без изменений — OpenCV временно отключён"""
-    return image_bytes
-
-# ==================== ОСНОВНОЙ ОБРАБОТЧИК ФОТО ====================
+# ==================== ОБРАБОТКА ФОТО (БЕЗ CV2) ====================
 
 @dp.message_handler(content_types=['photo'])
 async def handle_photo(message: types.Message):
@@ -293,14 +281,12 @@ async def handle_photo(message: types.Message):
     image_data = await bot.download_file(file.file_path)
     
     status_msg = await message.answer(
-        "🎨 *ОБРАБОТКА ФОТО...*\n\n"
-        "✨ ПОДГОТОВКА ФАЙЛА\n"
-        "⏳ 5-10 СЕКУНД",
+        "📸 *ПОЛУЧАЮ ФОТО...*\n\n"
+        "⏳ ПОДОЖДИТЕ НЕСКОЛЬКО СЕКУНД",
         parse_mode="Markdown"
     )
     
     try:
-        # Отправляем фото без изменений
         await status_msg.delete()
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -309,7 +295,7 @@ async def handle_photo(message: types.Message):
         
         await message.answer_photo(
             photo=image_data.read(),
-            caption="✅ *ФОТО ГОТОВО*\n\n"
+            caption="✅ *ФОТО ПРИНЯТО*\n\n"
                     "⚠️ *НАПОМИНАНИЕ:* ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ\n"
                     "➡️ КОМАНДОЙ /revoke ИЛИ КНОПКОЙ НИЖЕ",
             reply_markup=keyboard,
@@ -327,7 +313,7 @@ async def cmd_help(message: types.Message):
         "• /start — НАЧАТЬ РАБОТУ\n"
         "• /revoke — ОТОЗВАТЬ ВСЕ СОГЛАСИЯ\n\n"
         "🔹 *ЧТО ДЕЛАЕТ БОТ:*\n"
-        "• ПРИНИМАЕТ ФОТО И ОТПРАВЛЯЕТ ИХ ОБРАТНО\n"
+        "• ПРИНИМАЕТ ВАШИ ФОТО\n"
         "• СОБИРАЕТ ЮРИДИЧЕСКИЕ СОГЛАСИЯ\n"
         "• ВЕДЁТ ЛОГИ ДЕЙСТВИЙ\n\n"
         "⚠️ *ВЫ МОЖЕТЕ ОТОЗВАТЬ СОГЛАСИЕ В ЛЮБОЙ МОМЕНТ:* /revoke",
@@ -346,6 +332,6 @@ async def handle_unknown(message: types.Message):
 
 if __name__ == "__main__":
     print("🚀 БОТ ЗАПУЩЕН")
-    print("✅ ОБРАБОТКА OPENCV ОТКЛЮЧЕНА")
+    print("✅ БЕЗ OPENCV — ТОЛЬКО ПРИЁМ ФОТО")
     print("⚠️ ОТОЗВАТЬ СОГЛАСИЕ: /revoke")
     executor.start_polling(dp, skip_updates=True)
